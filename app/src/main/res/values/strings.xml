@@ -1,3 +1,119 @@
 <resources>
-    <string name="app_name">MobileTech Utility App</string>
+    <string name="app_name">Wi-Fi Check</string>
+    <string name="tab_check">Check</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- label for chips, phrase for sentences -->
+    <string name="usage_call">Video call</string>
+    <string name="usage_meeting">Group meeting</string>
+    <string name="usage_live">Live stream</string>
+    <string name="usage_music">Music</string>
+    <string name="usage_hd">HD video</string>
+    <string name="usage_uhd">4K video</string>
+    <string name="usage_game">Competitive gaming</string>
+    <string name="usage_cloud">Cloud gaming</string>
+    <string name="usage_web">Browse and email</string>
+    <string name="usage_work">Upload files</string>
+    <string name="usage_download">Big downloads</string>
+    <string name="phrase_call">video calls</string>
+    <string name="phrase_meeting">group meetings</string>
+    <string name="phrase_live">live streaming</string>
+    <string name="phrase_music">music</string>
+    <string name="phrase_hd">HD video</string>
+    <string name="phrase_uhd">4K video</string>
+    <string name="phrase_game">competitive gaming</string>
+    <string name="phrase_cloud">cloud gaming</string>
+    <string name="phrase_web">browsing and email</string>
+    <string name="phrase_work">uploading files</string>
+    <string name="phrase_download">big downloads</string>
+
+    <!-- Setting -->
+    <string name="picky_relaxed">Relaxed</string>
+    <string name="picky_normal">Normal</string>
+    <string name="picky_strict">Strict</string>
+    <string name="depth_quick">Quick</string>
+    <string name="depth_standard">Standard</string>
+    <string name="depth_thorough">Thorough</string>
+    <string name="units_mbps">Mbps</string>
+    <string name="units_mbs">MB/s</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="settings_title">Settings</string>
+    <string name="setting_usage">What are you doing?</string>
+    <string name="setting_picky">How picky?</string>
+    <string name="setting_picky_hint">Strict asks for 50% more headroom, relaxed for 30% less.</string>
+    <string name="setting_depth">Test depth</string>
+    <string name="setting_depth_hint">Quick checks response time only. Thorough measures longer.</string>
+    <string name="setting_data_saver">Data saver</string>
+    <string name="setting_data_saver_hint">On mobile data, only quick tests run.</string>
+    <string name="setting_haptics">Haptics</string>
+    <string name="setting_units">Speed units</string>
+
+    <!-- Metrics -->
+    <string name="metric_download">Download speed</string>
+    <string name="metric_upload">Upload speed</string>
+    <string name="metric_latency">Response time</string>
+    <string name="metric_stability">Stability</string>
+    <string name="verdict_good">Good for %1$s</string>
+    <string name="verdict_struggles">Struggles with %1$s</string>
+    <string name="verdict_poor">Not enough for %1$s</string>
+    <string name="reason_room">Every check passed with room to spare</string>
+    <string name="reason_tight">Close to the limit: %1$s is the tight spot</string>
+    <string name="reason_low">%1$s is a little low</string>
+    <string name="reason_problem">%1$s is the problem</string>
+    <string name="ready_title">Ready to check</string>
+    <string name="ready_sub">Press Test again to see if this suits %1$s</string>
+    <string name="testing">Testing…</string>
+    <string name="testing_sub">Checking response time and speed</string>
+    <string name="test_again">Test again</string>
+    <string name="no_connection">No connection</string>
+    <string name="no_connection_sub">Turn on Wi-Fi or mobile data, then test again</string>
+    <string name="error_timeout">Test timed out</string>
+    <string name="error_timeout_sub">The connection answered too slowly. Try again.</string>
+    <string name="error_server">Test server unavailable</string>
+    <string name="error_server_sub">The test server did not respond. Try again later.</string>
+
+    <!-- Diagnosis -->
+    <string name="diag_healthy">Everything between your phone and the internet looks healthy.</string>
+    <string name="diag_weak_wifi">Problem: your Wi-Fi. Move closer to the router or try the 5 GHz network.</string>
+    <string name="diag_slow_internet">Wi-Fi is fine. The internet is slow right now. Restart the router or try later.</string>
+    <string name="diag_weak_mobile">Problem: the mobile network. Try a spot with better coverage, or switch to Wi-Fi.</string>
+    <string name="diag_mobile_ok">The mobile network looks healthy.</string>
+    <string name="node_phone">Phone</string>
+    <string name="node_router">Router</string>
+    <string name="node_mobile">Mobile network</string>
+    <string name="node_internet">Internet</string>
+
+    <!-- Tips and estimates -->
+    <string name="tips_title">Smart tips</string>
+    <string name="tip_run_standard">Run a Standard test to measure download and upload speed.</string>
+    <string name="tip_move_closer">Move closer to the router, or switch to the 5 GHz network.</string>
+    <string name="tip_restart_router">Your provider is slow right now. Restart the router, or try again later.</string>
+    <string name="tip_pause_backups">Upload is the limit. Pause cloud backups and photo sync.</string>
+    <string name="tip_lower_quality">Lower the video quality to %1$s to avoid buffering.</string>
+    <string name="tip_pause_downloads">Pause other downloads on this network.</string>
+    <string name="tip_use_cable">Use a cable or 5 GHz Wi-Fi, and close background downloads.</string>
+    <string name="tip_unsteady">The connection is unsteady. Live calls and games will glitch, but buffered video is fine.</string>
+    <string name="tip_switch_wifi">On mobile data: switch to Wi-Fi when you can.</string>
+    <string name="tip_plenty">Plenty of headroom. This connection can handle more than you asked for.</string>
+    <string name="tip_all_good">No changes needed. You are good to go.</string>
+    <string name="est_best_quality">Best quality right now: %1$s</string>
+    <string name="est_too_slow">Too slow for 480p video right now</string>
+    <string name="est_download_time">A 10 GB game takes about %1$s</string>
+    <string name="est_upload_time">A 500 MB file uploads in about %1$s</string>
+    <string name="est_safe_bitrate">Safe stream bitrate: about %1$s Mbps</string>
+    <string name="est_group_video">Strong enough for group video</string>
+    <string name="est_one_to_one">Fine for one-to-one video, group calls may struggle</string>
+    <string name="est_audio_only">Switch to audio only to stay connected</string>
+
+    <!-- Main screen bits -->
+    <string name="connection_label">Connection</string>
+    <string name="metered">Metered</string>
+    <string name="allow_location_msg">Allow location to show the Wi-Fi network name.</string>
+    <string name="allow">Allow</string>
+    <string name="stale_msg">Network changed. The result below is out of date.</string>
+    <string name="stat_response">Response</string>
+    <string name="stat_upload">Upload</string>
+    <string name="stat_stability">Stability</string>
+    <string name="unit_ms">ms</string>
 </resources>

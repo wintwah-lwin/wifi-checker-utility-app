@@ -4,30 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import au.edu.jcu.assessment.utilityapp.ui.check.UtilityScreen
+import au.edu.jcu.assessment.utilityapp.ui.check.UtilityViewModel
+import au.edu.jcu.assessment.utilityapp.ui.settings.SettingsScreen
+import au.edu.jcu.assessment.utilityapp.ui.settings.SettingsViewModel
 import au.edu.jcu.assessment.utilityapp.ui.theme.MobileTech_UtilityAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,26 +40,27 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun UtilityAppPreview() {
-    MobileTech_UtilityAppTheme {
-        UtilityApp()
-    }
-}
-
 @Composable
 fun UtilityApp() {
-    var selectedTab by remember { mutableStateOf("Utility") }
+    var selectedTab by remember { mutableStateOf("Check") }
+    val app = LocalContext.current.applicationContext as UtilityApplication
+    val container = app.container
+
+    val utilityViewModel: UtilityViewModel = viewModel(
+        factory = UtilityViewModel.Factory(container.connectionRepository)
+    )
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.Factory(container.settingsRepository)
+    )
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Utility") },
-                    label = { Text("Utility") },
-                    selected = selectedTab == "Utility",
-                    onClick = { selectedTab = "Utility" }
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Wi-Fi Check") },
+                    label = { Text("Wi-Fi Check") },
+                    selected = selectedTab == "Check",
+                    onClick = { selectedTab = "Check" }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
@@ -74,40 +73,9 @@ fun UtilityApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                "Utility" -> UtilityScreen()
-                "Settings" -> SettingsScreen()
+                "Check" -> UtilityScreen(viewModel = utilityViewModel)
+                "Settings" -> SettingsScreen(viewModel = settingsViewModel)
             }
         }
-    }
-}
-
-@Composable
-fun UtilityScreen() {
-    var counter by remember { mutableIntStateOf(0) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Utility Screen", style = MaterialTheme.typography.headlineMedium)
-        Text("Counter: $counter", style = MaterialTheme.typography.bodyLarge)
-
-        Button(onClick = { counter++ }) {
-            Text("Increment")
-        }
-    }
-}
-
-@Composable
-fun SettingsScreen() {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(24.dp), Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Settings Screen", style = MaterialTheme.typography.headlineMedium)
-        Text("This is where you can add toggles or preferences.")
     }
 }
