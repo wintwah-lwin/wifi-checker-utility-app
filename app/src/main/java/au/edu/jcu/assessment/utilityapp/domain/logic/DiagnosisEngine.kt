@@ -1,28 +1,25 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.Diagnosis
-import au.edu.jcu.assessment.utilityapp.domain.model.DiagnosisMessage
-import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
-import au.edu.jcu.assessment.utilityapp.domain.model.LinkType
-import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
+import au.edu.jcu.assessment.utilityapp.domain.model.*
 
-class DiagnosisEngine {
-    fun diagnose(linkInfo: LinkInfo, measurement: Measurement): Diagnosis {
-        val localOk = when (linkInfo.type) {
-            LinkType.WIFI -> (linkInfo.signalDbm ?: -100) > -75
-            LinkType.CELLULAR -> (linkInfo.signalDbm ?: -100) > -105
-            else -> true
+/** Walks phone, router, internet and names the weakest link. */
+object DiagnosisEngine {
+    private const val WEAK_SIGNAL_DBM = -70
+    private const val SLOW_INTERNET_MS = 120
+
+    fun diagnose(link: LinkInfo, m: Measurement): Diagnosis {
+        val internetOk = m.latencyMs <= SLOW_INTERNET_MS
+        if (link.type == LinkType.CELLULAR) {
+            val msg = if (internetOk) DiagnosisMessage.MOBILE_OK else DiagnosisMessage.WEAK_MOBILE
+            return Diagnosis(localOk = null, internetOk = internetOk, message = msg)
         }
-
-        val internetOk = (measurement.downMbps ?: 0.0) >= 5.0 && measurement.latencyMs < 150
-
+        // Signal strength may be unknown, in which case we cannot blame the Wi-Fi.
+        val localOk = link.signalDbm?.let { it >= WEAK_SIGNAL_DBM }
         val msg = when {
-            localOk && internetOk -> if (linkInfo.type == LinkType.CELLULAR) DiagnosisMessage.MOBILE_OK else DiagnosisMessage.HEALTHY
-            !localOk && linkInfo.type == LinkType.WIFI -> DiagnosisMessage.WEAK_WIFI
-            !localOk && linkInfo.type == LinkType.CELLULAR -> DiagnosisMessage.WEAK_MOBILE
-            else -> DiagnosisMessage.SLOW_INTERNET
+            localOk == false -> DiagnosisMessage.WEAK_WIFI
+            !internetOk -> DiagnosisMessage.SLOW_INTERNET
+            else -> DiagnosisMessage.HEALTHY
         }
-
-        return Diagnosis(localOk = localOk, internetOk = internetOk, message = msg)
+        return Diagnosis(localOk, internetOk, msg)
     }
 }

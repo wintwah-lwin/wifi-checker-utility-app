@@ -1,42 +1,37 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.Grade
-import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
-import au.edu.jcu.assessment.utilityapp.domain.model.Metric
-import au.edu.jcu.assessment.utilityapp.domain.model.Picky
-import au.edu.jcu.assessment.utilityapp.domain.model.Usage
-import au.edu.jcu.assessment.utilityapp.domain.model.Verdict
+import au.edu.jcu.assessment.utilityapp.domain.model.*
+import kotlin.math.max
 
-class VerdictCalculator {
-    fun calculateVerdict(measurement: Measurement, usage: Usage, picky: Picky): Verdict {
-        val needs = usage.needs
-        val scale = picky.scale
+/**
+ * Turns a measurement into a verdict for one activity.
+ *
+ * Each metric becomes a ratio against what the activity needs: 1.0 or more means it is met.
+ * The worst ratio decides the grade and names the limiting metric.
+ */
+object VerdictCalculator {
+    const val GOOD_AT = 1.0
+    const val STRUGGLES_AT = 0.6
 
-        val requiredDown = needs.downMbps * scale
-        val requiredUp = needs.upMbps * scale
-        val maxLatency = needs.maxLatencyMs / scale
-        val maxJitter = needs.maxJitterMs / scale
+    fun ratios(m: Measurement, usage: Usage, picky: Picky): Map<Metric, Double> {
+        val need = usage.needs
+        val k = picky.scale
+        return buildMap {
+            // Lower is better for latency and jitter, so the ratio is need divided by measured.
+            put(Metric.LATENCY, (need.maxLatencyMs / k) / max(m.latencyMs, 1))
+            put(Metric.STABILITY, (need.maxJitterMs / k) / max(m.jitterMs, 1))
+            m.downMbps?.let { put(Metric.DOWNLOAD, it / (need.downMbps * k)) }
+            m.upMbps?.let { put(Metric.UPLOAD, it / (need.upMbps * k)) }
+        }
+    }
 
-        val downRatio = (measurement.downMbps ?: 0.0) / requiredDown
-        val upRatio = (measurement.upMbps ?: 0.0) / requiredUp
-        val latencyRatio = maxLatency / measurement.latencyMs.coerceAtLeast(1)
-        val jitterRatio = maxJitter / measurement.jitterMs.coerceAtLeast(1)
-
-        val ratios = mapOf(
-            Metric.DOWNLOAD to downRatio,
-            Metric.UPLOAD to upRatio,
-            Metric.LATENCY to latencyRatio,
-            Metric.STABILITY to jitterRatio
-        )
-
-        val (limitingMetric, lowestRatio) = ratios.minBy { it.value }
-
+    fun grade(m: Measurement, usage: Usage, picky: Picky): Verdict {
+        val worst = ratios(m, usage, picky).entries.minBy { it.value }
         val grade = when {
-            lowestRatio >= 1.0 -> Grade.GOOD
-            lowestRatio >= 0.6 -> Grade.STRUGGLES
+            worst.value >= GOOD_AT -> Grade.GOOD
+            worst.value >= STRUGGLES_AT -> Grade.STRUGGLES
             else -> Grade.POOR
         }
-
-        return Verdict(grade = grade, limiting = limitingMetric, ratio = lowestRatio)
+        return Verdict(grade, worst.key, worst.value)
     }
 }

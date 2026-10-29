@@ -1,44 +1,34 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.Estimate
-import au.edu.jcu.assessment.utilityapp.domain.model.EstimateKey
-import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
-import au.edu.jcu.assessment.utilityapp.domain.model.Usage
+import au.edu.jcu.assessment.utilityapp.domain.model.*
 
-class EstimateEngine {
-    fun estimate(measurement: Measurement, usage: Usage): Estimate? {
-        val down = measurement.downMbps ?: 0.0
+/** Activity-specific numbers that make the verdict concrete. */
+object EstimateEngine {
+    private val videoTiers = listOf("480p" to 3.0, "720p" to 5.0, "1080p" to 8.0, "4K" to 25.0)
+    private const val GAME_BITS_MEGA = 80_000.0      // 10 GB in megabits
+    private const val FILE_BITS_MEGA = 4_000.0       // 500 MB in megabits
 
-        return when (usage) {
-            Usage.HD, Usage.UHD -> {
-                val quality = when {
-                    down >= 25.0 -> "4K UHD"
-                    down >= 8.0 -> "1080p HD"
-                    down >= 3.0 -> "720p HD"
-                    else -> "480p SD"
-                }
-                Estimate(EstimateKey.BEST_QUALITY, quality)
+    /** Highest video quality the measured download speed can hold, or null if even 480p is too much. */
+    fun bestQuality(m: Measurement, picky: Picky): String? {
+        val down = m.downMbps ?: return null
+        return videoTiers.lastOrNull { down >= it.second * picky.scale }?.first
+    }
+
+    fun estimate(m: Measurement, s: Settings): Estimate? {
+        val down = m.downMbps ?: return null
+        val up = m.upMbps ?: return null
+        return when (s.usage) {
+            Usage.HD, Usage.UHD -> bestQuality(m, s.picky)
+                ?.let { Estimate(EstimateKey.BEST_QUALITY, it) } ?: Estimate(EstimateKey.TOO_SLOW)
+            Usage.DOWNLOAD -> Estimate(EstimateKey.DOWNLOAD_TIME, (GAME_BITS_MEGA / down.coerceAtLeast(0.1)).toString())
+            Usage.WORK -> Estimate(EstimateKey.UPLOAD_TIME, (FILE_BITS_MEGA / up.coerceAtLeast(0.1)).toString())
+            Usage.LIVE -> Estimate(EstimateKey.SAFE_BITRATE, "%.0f".format(up * 0.7))
+            Usage.CALL, Usage.MEETING -> when {
+                VerdictCalculator.grade(m, Usage.MEETING, s.picky).grade == Grade.GOOD -> Estimate(EstimateKey.GROUP_VIDEO)
+                VerdictCalculator.grade(m, Usage.CALL, s.picky).grade == Grade.GOOD -> Estimate(EstimateKey.ONE_TO_ONE)
+                else -> Estimate(EstimateKey.AUDIO_ONLY)
             }
-            Usage.DOWNLOAD -> {
-                if (down > 0) {
-                    val minutes = (10000 * 8 / down / 60).toInt()
-                    Estimate(EstimateKey.DOWNLOAD_TIME, "$minutes min")
-                } else {
-                    Estimate(EstimateKey.TOO_SLOW)
-                }
-            }
-            Usage.CALL, Usage.MEETING -> {
-                when {
-                    down >= 6.0 && measurement.latencyMs < 100 -> Estimate(EstimateKey.GROUP_VIDEO)
-                    down >= 2.0 -> Estimate(EstimateKey.ONE_TO_ONE)
-                    else -> Estimate(EstimateKey.AUDIO_ONLY)
-                }
-            }
-            else -> {
-                if (down > 0) {
-                    Estimate(EstimateKey.SAFE_BITRATE, String.format("%.1f", down * 0.8))
-                } else null
-            }
+            else -> null
         }
     }
 }

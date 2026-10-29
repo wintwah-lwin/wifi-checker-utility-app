@@ -29,8 +29,7 @@ data class UtilityUiState(
 
 class UtilityViewModel(
     private val connectionRepository: ConnectionRepository,
-    private val settingsRepository: SettingsRepository,
-    private val analyzer: ConnectionAnalyzer = ConnectionAnalyzer()
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UtilityUiState())
@@ -41,7 +40,7 @@ class UtilityViewModel(
             settingsRepository.settings.collect { newSettings ->
                 _uiState.update { current ->
                     val newAnalysis = current.measurement?.let { m ->
-                        analyzer.analyze(m, current.linkInfo, newSettings)
+                        ConnectionAnalyzer.analyze(m, current.linkInfo, newSettings)
                     }
                     current.copy(settings = newSettings, analysis = newAnalysis ?: current.analysis)
                 }
@@ -73,7 +72,7 @@ class UtilityViewModel(
                         _uiState.update { it.copy(currentSampleMbps = event.mbps) }
                     }
                     is TestEvent.Finished -> {
-                        val analysis = analyzer.analyze(event.measurement, _uiState.value.linkInfo, _uiState.value.settings)
+                        val analysis = ConnectionAnalyzer.analyze(event.measurement, _uiState.value.linkInfo, _uiState.value.settings)
                         _uiState.update {
                             it.copy(
                                 isTesting = false,

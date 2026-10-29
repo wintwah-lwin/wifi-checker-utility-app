@@ -1,41 +1,33 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.Grade
-import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
-import au.edu.jcu.assessment.utilityapp.domain.model.LinkType
-import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
-import au.edu.jcu.assessment.utilityapp.domain.model.Metric
-import au.edu.jcu.assessment.utilityapp.domain.model.Tip
-import au.edu.jcu.assessment.utilityapp.domain.model.TipKey
-import au.edu.jcu.assessment.utilityapp.domain.model.Verdict
+import au.edu.jcu.assessment.utilityapp.domain.model.*
 
-class TipEngine {
-    fun generateTips(verdict: Verdict, linkInfo: LinkInfo, measurement: Measurement): List<Tip> {
-        val tips = mutableListOf<Tip>()
+/** Rule-based suggestions, most useful first. Returns at most three. */
+object TipEngine {
+    private val videoUsages = setOf(Usage.HD, Usage.UHD)
+    private const val MAX_TIPS = 3
+    private const val PLENTY_RATIO = 2.0
 
-        if (verdict.grade == Grade.GOOD) {
-            tips.add(Tip(TipKey.ALL_GOOD))
-            if (verdict.ratio > 2.0) {
-                tips.add(Tip(TipKey.PLENTY_HEADROOM))
+    fun tips(m: Measurement, link: LinkInfo, d: Diagnosis, v: Verdict, s: Settings): List<Tip> = buildList {
+        if (m.downMbps == null) add(Tip(TipKey.RUN_STANDARD))
+
+        // Name the weakest link first, because fixing it helps every activity.
+        if (d.localOk == false) add(Tip(TipKey.MOVE_CLOSER))
+        else if (!d.internetOk) add(Tip(TipKey.RESTART_ROUTER))
+
+        // Then address the metric that limits this particular activity.
+        if (v.grade != Grade.GOOD) {
+            when (v.limiting) {
+                Metric.UPLOAD -> add(Tip(TipKey.PAUSE_BACKUPS))
+                Metric.DOWNLOAD -> add(
+                    if (s.usage in videoUsages) Tip(TipKey.LOWER_QUALITY, EstimateEngine.bestQuality(m, s.picky) ?: "480p")
+                    else Tip(TipKey.PAUSE_DOWNLOADS)
+                )
+                Metric.LATENCY -> add(Tip(TipKey.USE_CABLE))
+                Metric.STABILITY -> add(Tip(TipKey.UNSTEADY))
             }
-            return tips
         }
-
-        if (linkInfo.type == LinkType.WIFI && (linkInfo.signalDbm ?: -100) < -75) {
-            tips.add(Tip(TipKey.MOVE_CLOSER))
-        }
-
-        when (verdict.limiting) {
-            Metric.UPLOAD -> tips.add(Tip(TipKey.PAUSE_BACKUPS))
-            Metric.DOWNLOAD -> tips.add(Tip(TipKey.PAUSE_DOWNLOADS))
-            Metric.LATENCY -> tips.add(Tip(TipKey.RESTART_ROUTER))
-            Metric.STABILITY -> tips.add(Tip(TipKey.UNSTEADY))
-        }
-
-        if (linkInfo.type == LinkType.CELLULAR) {
-            tips.add(Tip(TipKey.SWITCH_TO_WIFI))
-        }
-
-        return tips.ifEmpty { listOf(Tip(TipKey.RUN_STANDARD)) }
-    }
+        if (link.type == LinkType.CELLULAR || link.metered) add(Tip(TipKey.SWITCH_TO_WIFI))
+        if (isEmpty()) add(Tip(if (v.ratio >= PLENTY_RATIO) TipKey.PLENTY_HEADROOM else TipKey.ALL_GOOD))
+    }.take(MAX_TIPS)
 }
