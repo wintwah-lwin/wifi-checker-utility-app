@@ -18,14 +18,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import au.edu.jcu.assessment.utilityapp.domain.model.SpeedUnit
+import au.edu.jcu.assessment.utilityapp.R
+import au.edu.jcu.assessment.utilityapp.domain.model.Picky
+import au.edu.jcu.assessment.utilityapp.domain.model.TestDepth
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val settings by viewModel.settings.collectAsState()
-    val usage by viewModel.usage.collectAsState()
 
     Column(
         modifier = Modifier
@@ -35,27 +37,80 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Settings & Usage",
+            text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
 
-        // Usage Statistics Card
+        // Picky Scale Selector
         Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Usage Summary",
+                    text = stringResource(R.string.setting_picky),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
-                Text("• Total Tests Run: ${usage.totalTestsRun}")
-                Text("• Peak Speed: ${String.format("%.1f", usage.highestSpeedMbps)} Mbps")
-                Text("• Average Speed: ${String.format("%.1f", usage.averageDownloadSpeedMbps)} Mbps")
-                Text("• Data Consumption: ${String.format("%.1f", usage.totalDataUsedMb)} MB")
+                Text(
+                    text = stringResource(R.string.setting_picky_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Picky.entries.forEach { p ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = settings.picky == p,
+                            onClick = { viewModel.selectPicky(p) }
+                        )
+                        Text(
+                            text = stringResource(p.label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
             }
         }
 
-        // Diagnostic Tips Toggle Card
+        // Test Depth Selector
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(R.string.setting_depth),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = stringResource(R.string.setting_depth_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                TestDepth.entries.forEach { d ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = settings.depth == d,
+                            onClick = { viewModel.selectDepth(d) }
+                        )
+                        Text(
+                            text = stringResource(d.label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Data Saver Switch
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -66,49 +121,20 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Show Diagnostic Tips",
+                        text = stringResource(R.string.setting_data_saver),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Display network troubleshooting recommendations",
+                        text = stringResource(R.string.setting_data_saver_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
                 Switch(
-                    checked = settings.showDiagnosticTips,
-                    onCheckedChange = { viewModel.toggleDiagnosticTips(it) }
+                    checked = settings.dataSaver,
+                    onCheckedChange = { viewModel.toggleDataSaver(it) }
                 )
-            }
-        }
-
-        // Speed Unit Selector Card
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Preferred Speed Unit",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                SpeedUnit.entries.forEach { unit ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = settings.preferredSpeedUnit == unit,
-                            onClick = { viewModel.selectSpeedUnit(unit) }
-                        )
-                        Text(
-                            text = unit.label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
             }
         }
     }

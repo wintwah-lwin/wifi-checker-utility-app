@@ -1,39 +1,44 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.ActivityEstimates
-import au.edu.jcu.assessment.utilityapp.domain.model.ConnectionMetrics
+import au.edu.jcu.assessment.utilityapp.domain.model.Estimate
+import au.edu.jcu.assessment.utilityapp.domain.model.EstimateKey
+import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
+import au.edu.jcu.assessment.utilityapp.domain.model.Usage
 
 class EstimateEngine {
-    fun estimate(metrics: ConnectionMetrics): ActivityEstimates {
-        val speed = metrics.downloadSpeedMbps
+    fun estimate(measurement: Measurement, usage: Usage): Estimate? {
+        val down = measurement.downMbps ?: 0.0
 
-        val videoCallQuality = when {
-            speed >= 15.0 && metrics.pingMs <= 50 -> "HD 1080p Smooth"
-            speed >= 5.0 -> "Standard 720p"
-            speed >= 1.5 -> "Basic Video"
-            else -> "Audio Only / Poor"
+        return when (usage) {
+            Usage.HD, Usage.UHD -> {
+                val quality = when {
+                    down >= 25.0 -> "4K UHD"
+                    down >= 8.0 -> "1080p HD"
+                    down >= 3.0 -> "720p HD"
+                    else -> "480p SD"
+                }
+                Estimate(EstimateKey.BEST_QUALITY, quality)
+            }
+            Usage.DOWNLOAD -> {
+                if (down > 0) {
+                    val minutes = (10000 * 8 / down / 60).toInt()
+                    Estimate(EstimateKey.DOWNLOAD_TIME, "$minutes min")
+                } else {
+                    Estimate(EstimateKey.TOO_SLOW)
+                }
+            }
+            Usage.CALL, Usage.MEETING -> {
+                when {
+                    down >= 6.0 && measurement.latencyMs < 100 -> Estimate(EstimateKey.GROUP_VIDEO)
+                    down >= 2.0 -> Estimate(EstimateKey.ONE_TO_ONE)
+                    else -> Estimate(EstimateKey.AUDIO_ONLY)
+                }
+            }
+            else -> {
+                if (down > 0) {
+                    Estimate(EstimateKey.SAFE_BITRATE, String.format("%.1f", down * 0.8))
+                } else null
+            }
         }
-
-        val streaming4k = when {
-            speed >= 25.0 -> "4K Ultra HD Supported"
-            speed >= 10.0 -> "1080p Full HD Supported"
-            speed >= 3.0 -> "720p HD Supported"
-            else -> "Buffering Expected"
-        }
-
-        val download1GbTimeMinutes = if (speed > 0.0) {
-            val seconds = (1000 * 8) / speed // 1GB = 8000 Mbits
-            val mins = (seconds / 60).toInt()
-            val secs = (seconds % 60).toInt()
-            "${mins}m ${secs}s"
-        } else {
-            "N/A"
-        }
-
-        return ActivityEstimates(
-            videoCallQuality = videoCallQuality,
-            streaming4k = streaming4k,
-            download1GbTimeMinutes = download1GbTimeMinutes
-        )
     }
 }

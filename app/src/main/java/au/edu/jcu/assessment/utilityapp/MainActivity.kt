@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import au.edu.jcu.assessment.utilityapp.ui.check.UtilityScreen
 import au.edu.jcu.assessment.utilityapp.ui.check.UtilityViewModel
@@ -47,7 +48,7 @@ fun UtilityApp() {
     val container = app.container
 
     val utilityViewModel: UtilityViewModel = viewModel(
-        factory = UtilityViewModel.Factory(container.connectionRepository)
+        factory = UtilityViewModel.Factory(container.connectionRepository, container.settingsRepository)
     )
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(container.settingsRepository)
@@ -57,14 +58,14 @@ fun UtilityApp() {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Wi-Fi Check") },
-                    label = { Text("Wi-Fi Check") },
+                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.tab_check)) },
+                    label = { Text(stringResource(R.string.tab_check)) },
                     selected = selectedTab == "Check",
                     onClick = { selectedTab = "Check" }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.tab_settings)) },
+                    label = { Text(stringResource(R.string.tab_settings)) },
                     selected = selectedTab == "Settings",
                     onClick = { selectedTab = "Settings" }
                 )

@@ -1,34 +1,41 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.NetworkVerdict
-import au.edu.jcu.assessment.utilityapp.domain.model.WifiInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.Grade
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkType
+import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
+import au.edu.jcu.assessment.utilityapp.domain.model.Metric
+import au.edu.jcu.assessment.utilityapp.domain.model.Tip
+import au.edu.jcu.assessment.utilityapp.domain.model.TipKey
+import au.edu.jcu.assessment.utilityapp.domain.model.Verdict
 
 class TipEngine {
-    fun generateTips(verdict: NetworkVerdict, wifiInfo: WifiInfo): List<String> {
-        val tips = mutableListOf<String>()
+    fun generateTips(verdict: Verdict, linkInfo: LinkInfo, measurement: Measurement): List<Tip> {
+        val tips = mutableListOf<Tip>()
 
-        when (verdict) {
-            NetworkVerdict.OFFLINE -> {
-                tips.add("Check if Wi-Fi is enabled on your phone settings.")
-                tips.add("Ensure your router is powered on and cables are plugged in securely.")
+        if (verdict.grade == Grade.GOOD) {
+            tips.add(Tip(TipKey.ALL_GOOD))
+            if (verdict.ratio > 2.0) {
+                tips.add(Tip(TipKey.PLENTY_HEADROOM))
             }
-            NetworkVerdict.POOR -> {
-                tips.add("Move closer to your Wi-Fi router to eliminate physical barriers.")
-                tips.add("Restart your Wi-Fi router by unplugging it for 10 seconds.")
-                tips.add("Disconnect unused background devices sharing the network.")
-            }
-            NetworkVerdict.FAIR -> {
-                if (wifiInfo.frequencyMhz < 3000) {
-                    tips.add("Switch from 2.4 GHz to 5 GHz Wi-Fi band if your router supports dual-band.")
-                }
-                tips.add("Close heavy bandwidth apps or background downloads.")
-            }
-            NetworkVerdict.GOOD, NetworkVerdict.EXCELLENT -> {
-                tips.add("Your connection is performing optimal Wi-Fi speed and stability.")
-                tips.add("Keep your router firmware updated for maximum performance.")
-            }
+            return tips
         }
 
-        return tips
+        if (linkInfo.type == LinkType.WIFI && (linkInfo.signalDbm ?: -100) < -75) {
+            tips.add(Tip(TipKey.MOVE_CLOSER))
+        }
+
+        when (verdict.limiting) {
+            Metric.UPLOAD -> tips.add(Tip(TipKey.PAUSE_BACKUPS))
+            Metric.DOWNLOAD -> tips.add(Tip(TipKey.PAUSE_DOWNLOADS))
+            Metric.LATENCY -> tips.add(Tip(TipKey.RESTART_ROUTER))
+            Metric.STABILITY -> tips.add(Tip(TipKey.UNSTEADY))
+        }
+
+        if (linkInfo.type == LinkType.CELLULAR) {
+            tips.add(Tip(TipKey.SWITCH_TO_WIFI))
+        }
+
+        return tips.ifEmpty { listOf(Tip(TipKey.RUN_STANDARD)) }
     }
 }

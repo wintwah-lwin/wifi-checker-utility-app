@@ -4,12 +4,13 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
-import au.edu.jcu.assessment.utilityapp.domain.model.WifiInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkType
 
 class ConnectionInfoProvider(private val context: Context) {
 
     @Suppress("DEPRECATION")
-    fun getWifiInfo(): WifiInfo {
+    fun getLinkInfo(): LinkInfo {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val wifiManager =
@@ -17,26 +18,34 @@ class ConnectionInfoProvider(private val context: Context) {
 
         val activeNetwork = connectivityManager?.activeNetwork
         val capabilities = connectivityManager?.getNetworkCapabilities(activeNetwork)
-        val isWifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
 
-        if (!isWifi || wifiManager == null) {
-            return WifiInfo(
-                ssid = if (capabilities != null) "Cellular / Ethernet" else "Disconnected",
-                isConnected = capabilities != null
-            )
+        if (capabilities == null) {
+            return LinkInfo(type = LinkType.NONE)
         }
 
-        val connectionInfo = wifiManager.connectionInfo
-        val rawSsid = connectionInfo?.ssid ?: "Connected Wi-Fi"
-        val cleanSsid = rawSsid.replace("\"", "").let { if (it == "<unknown ssid>") "Campus/Home Wi-Fi" else it }
+        val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val isCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        val isEthernet = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
 
-        return WifiInfo(
-            ssid = cleanSsid,
-            bssid = connectionInfo?.bssid ?: "00:00:00:00:00:00",
-            rssi = connectionInfo?.rssi ?: -65,
-            linkSpeedMbps = connectionInfo?.linkSpeed ?: 150,
-            frequencyMhz = connectionInfo?.frequency ?: 5180,
-            isConnected = true
+        val linkType = when {
+            isWifi -> LinkType.WIFI
+            isCellular -> LinkType.CELLULAR
+            isEthernet -> LinkType.ETHERNET
+            else -> LinkType.NONE
+        }
+
+        val wifiInfo = if (isWifi && wifiManager != null) wifiManager.connectionInfo else null
+        val rawSsid = wifiInfo?.ssid?.replace("\"", "")
+        val cleanSsid = if (rawSsid == "<unknown ssid>" || rawSsid.isNullOrBlank()) "Home Wi-Fi" else rawSsid
+        val rssi = wifiInfo?.rssi ?: -65
+
+        val isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+
+        return LinkInfo(
+            type = linkType,
+            name = if (isWifi) cleanSsid else if (isCellular) "Mobile Network" else "Ethernet",
+            signalDbm = if (isWifi) rssi else null,
+            metered = isMetered
         )
     }
 }

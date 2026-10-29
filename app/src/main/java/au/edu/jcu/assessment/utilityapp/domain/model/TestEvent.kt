@@ -1,10 +1,10 @@
 package au.edu.jcu.assessment.utilityapp.domain.model
 
+enum class ErrorReason { NO_NETWORK, TIMEOUT, SERVER }
+
+/** Events a running test emit */
 sealed interface TestEvent {
-    data class Started(val stage: TestStage) : TestEvent
-    data class PingUpdated(val pingMs: Long) : TestEvent
-    data class DownloadUpdated(val speedMbps: Double, val progress: Float) : TestEvent
-    data class UploadUpdated(val speedMbps: Double, val progress: Float) : TestEvent
-    data class Completed(val report: AnalysisReport) : TestEvent
-    data class Failed(val reason: String) : TestEvent
+    data class Sample(val mbps: Double) : TestEvent
+    data class Finished(val measurement: Measurement) : TestEvent
+    data class Failed(val reason: ErrorReason) : TestEvent
 }

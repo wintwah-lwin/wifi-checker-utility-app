@@ -1,5 +1,6 @@
 package au.edu.jcu.assessment.utilityapp.ui.check
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -25,9 +27,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import au.edu.jcu.assessment.utilityapp.domain.model.TestStage
+import au.edu.jcu.assessment.utilityapp.R
+import au.edu.jcu.assessment.utilityapp.domain.model.Usage
 import au.edu.jcu.assessment.utilityapp.ui.check.components.DiagnosisCard
 import au.edu.jcu.assessment.utilityapp.ui.check.components.GaugeCard
 import au.edu.jcu.assessment.utilityapp.ui.check.components.VerdictBadge
@@ -43,7 +47,7 @@ fun UtilityScreen(viewModel: UtilityViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Top Header
+        // Title Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -51,130 +55,138 @@ fun UtilityScreen(viewModel: UtilityViewModel) {
         ) {
             Column {
                 Text(
-                    text = "Wi-Fi Checker",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Analyze network speed & health",
+                    text = state.linkInfo.name ?: stringResource(R.string.no_connection),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
             }
-            IconButton(onClick = { viewModel.refreshWifiInfo() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh Wi-Fi")
+            IconButton(onClick = { viewModel.refreshLinkInfo() }) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
             }
         }
 
-        // Connection Summary Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        // Usage Selector Chips
+        Text(
+            text = stringResource(R.string.setting_usage),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
+            Usage.entries.forEach { usage ->
+                FilterChip(
+                    selected = state.settings.usage == usage,
+                    onClick = { viewModel.selectUsage(usage) },
+                    label = { Text(stringResource(usage.label)) }
+                )
+            }
+        }
+
+        // Verdict Summary Card
+        state.analysis?.let { analysis ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = state.wifiInfo.ssid,
+                            text = stringResource(state.settings.usage.label),
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = "Signal: ${state.wifiInfo.rssi} dBm • Link: ${state.wifiInfo.linkSpeedMbps} Mbps",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        VerdictBadge(
+                            verdict = analysis.verdict,
+                            usageName = stringResource(state.settings.usage.phrase)
                         )
                     }
-                    VerdictBadge(verdict = state.report.verdict)
+
+                    analysis.estimate?.let { est ->
+                        val estText = if (est.arg != null) stringResource(est.key.res, est.arg) else stringResource(est.key.res)
+                        Text(
+                            text = estText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // Progress bar when testing
+        // Progress bar during testing
         if (state.isTesting) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Testing Stage: ${state.stage.name}",
+                    text = stringResource(R.string.testing),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                LinearProgressIndicator(
-                    progress = { state.progress },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
 
-        // Speed Metrics Row
+        // Metrics Row
+        val m = state.measurement
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             GaugeCard(
-                title = "DOWNLOAD",
-                value = String.format("%.1f", state.downloadMbps),
-                subtitle = "Mbps",
+                title = stringResource(R.string.metric_download),
+                value = if (state.isTesting) String.format("%.1f", state.currentSampleMbps) else m?.downMbps?.let { String.format("%.1f", it) } ?: "--",
+                subtitle = stringResource(R.string.units_mbps),
                 modifier = Modifier.weight(1f)
             )
             GaugeCard(
-                title = "UPLOAD",
-                value = String.format("%.1f", state.uploadMbps),
-                subtitle = "Mbps",
+                title = stringResource(R.string.metric_upload),
+                value = m?.upMbps?.let { String.format("%.1f", it) } ?: "--",
+                subtitle = stringResource(R.string.units_mbps),
                 modifier = Modifier.weight(1f)
             )
             GaugeCard(
-                title = "PING",
-                value = "${state.pingMs}",
-                subtitle = "ms",
+                title = stringResource(R.string.metric_latency),
+                value = m?.latencyMs?.toString() ?: "--",
+                subtitle = stringResource(R.string.unit_ms),
                 modifier = Modifier.weight(1f)
             )
         }
 
-        // Action Button
+        // Run Test Action Button
         Button(
-            onClick = { viewModel.startSpeedTest() },
+            onClick = { viewModel.startTest() },
             enabled = !state.isTesting,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
             Text(
-                text = if (state.isTesting) "Testing Wi-Fi..." else "Start Connection Test",
+                text = if (state.isTesting) stringResource(R.string.testing) else stringResource(R.string.test_again),
                 style = MaterialTheme.typography.titleMedium
             )
         }
 
-        // Estimates Section
-        if (state.stage == TestStage.FINISHED) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Activity Suitability",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text("• Video Calls: ${state.report.estimates.videoCallQuality}")
-                    Text("• 4K Streaming: ${state.report.estimates.streaming4k}")
-                    Text("• 1 GB Download Time: ${state.report.estimates.download1GbTimeMinutes}")
-                }
-            }
+        // Diagnosis & Tips Section
+        state.analysis?.let { analysis ->
+            DiagnosisCard(
+                diagnosis = analysis.diagnosis,
+                tips = analysis.tips
+            )
         }
-
-        // Diagnostics & Tips Cards
-        DiagnosisCard(
-            title = "Network Diagnostics",
-            items = state.report.diagnosisList
-        )
-
-        DiagnosisCard(
-            title = "Optimization Tips",
-            items = state.report.tipsList
-        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }

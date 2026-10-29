@@ -1,8 +1,11 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.AnalysisReport
-import au.edu.jcu.assessment.utilityapp.domain.model.ConnectionMetrics
-import au.edu.jcu.assessment.utilityapp.domain.model.WifiInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.Analysis
+import au.edu.jcu.assessment.utilityapp.domain.model.Grade
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
+import au.edu.jcu.assessment.utilityapp.domain.model.Settings
+import au.edu.jcu.assessment.utilityapp.domain.model.Usage
 
 class ConnectionAnalyzer(
     private val verdictCalculator: VerdictCalculator = VerdictCalculator(),
@@ -10,19 +13,22 @@ class ConnectionAnalyzer(
     private val tipEngine: TipEngine = TipEngine(),
     private val estimateEngine: EstimateEngine = EstimateEngine()
 ) {
-    fun analyze(metrics: ConnectionMetrics, wifiInfo: WifiInfo): AnalysisReport {
-        val verdict = verdictCalculator.calculateVerdict(metrics, wifiInfo.isConnected)
-        val diagnosisList = diagnosisEngine.diagnose(metrics, wifiInfo)
-        val tipsList = tipEngine.generateTips(verdict, wifiInfo)
-        val estimates = estimateEngine.estimate(metrics)
+    fun analyze(measurement: Measurement, linkInfo: LinkInfo, settings: Settings): Analysis {
+        val verdict = verdictCalculator.calculateVerdict(measurement, settings.usage, settings.picky)
+        val diagnosis = diagnosisEngine.diagnose(linkInfo, measurement)
+        val tips = tipEngine.generateTips(verdict, linkInfo, measurement)
+        val estimate = estimateEngine.estimate(measurement, settings.usage)
 
-        return AnalysisReport(
+        val chips = Usage.entries.associateWith { u ->
+            verdictCalculator.calculateVerdict(measurement, u, settings.picky).grade
+        }
+
+        return Analysis(
             verdict = verdict,
-            metrics = metrics,
-            wifiInfo = wifiInfo,
-            diagnosisList = diagnosisList,
-            tipsList = tipsList,
-            estimates = estimates
+            diagnosis = diagnosis,
+            tips = tips,
+            estimate = estimate,
+            chips = chips
         )
     }
 }

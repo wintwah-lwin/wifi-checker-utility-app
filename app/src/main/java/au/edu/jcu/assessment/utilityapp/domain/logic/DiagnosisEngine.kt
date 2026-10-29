@@ -1,38 +1,28 @@
 package au.edu.jcu.assessment.utilityapp.domain.logic
 
-import au.edu.jcu.assessment.utilityapp.domain.model.ConnectionMetrics
-import au.edu.jcu.assessment.utilityapp.domain.model.WifiInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.Diagnosis
+import au.edu.jcu.assessment.utilityapp.domain.model.DiagnosisMessage
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkInfo
+import au.edu.jcu.assessment.utilityapp.domain.model.LinkType
+import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
 
 class DiagnosisEngine {
-    fun diagnose(metrics: ConnectionMetrics, wifiInfo: WifiInfo): List<String> {
-        val diagnoses = mutableListOf<String>()
-
-        if (!wifiInfo.isConnected) {
-            return listOf("Wi-Fi is currently disconnected. Connect to a network to test speed.")
+    fun diagnose(linkInfo: LinkInfo, measurement: Measurement): Diagnosis {
+        val localOk = when (linkInfo.type) {
+            LinkType.WIFI -> (linkInfo.signalDbm ?: -100) > -75
+            LinkType.CELLULAR -> (linkInfo.signalDbm ?: -100) > -105
+            else -> true
         }
 
-        if (wifiInfo.rssi < -75) {
-            diagnoses.add("Weak Wi-Fi signal strength (${wifiInfo.rssi} dBm). Expect packet loss or speed drops.")
-        } else {
-            diagnoses.add("Strong Wi-Fi signal strength (${wifiInfo.rssi} dBm).")
+        val internetOk = (measurement.downMbps ?: 0.0) >= 5.0 && measurement.latencyMs < 150
+
+        val msg = when {
+            localOk && internetOk -> if (linkInfo.type == LinkType.CELLULAR) DiagnosisMessage.MOBILE_OK else DiagnosisMessage.HEALTHY
+            !localOk && linkInfo.type == LinkType.WIFI -> DiagnosisMessage.WEAK_WIFI
+            !localOk && linkInfo.type == LinkType.CELLULAR -> DiagnosisMessage.WEAK_MOBILE
+            else -> DiagnosisMessage.SLOW_INTERNET
         }
 
-        if (metrics.pingMs > 100) {
-            diagnoses.add("High latency / ping (${metrics.pingMs} ms). May cause lag in video calls and online gaming.")
-        } else if (metrics.pingMs > 0) {
-            diagnoses.add("Low network latency (${metrics.pingMs} ms). Great for real-time applications.")
-        }
-
-        if (metrics.downloadSpeedMbps < 10.0) {
-            diagnoses.add("Download speed (${String.format("%.1f", metrics.downloadSpeedMbps)} Mbps) is below average for HD streaming.")
-        } else {
-            diagnoses.add("Solid download bandwidth (${String.format("%.1f", metrics.downloadSpeedMbps)} Mbps).")
-        }
-
-        if (metrics.jitterMs > 20) {
-            diagnoses.add("Noticeable network jitter (${metrics.jitterMs} ms). Connection stability varies.")
-        }
-
-        return diagnoses
+        return Diagnosis(localOk = localOk, internetOk = internetOk, message = msg)
     }
 }
