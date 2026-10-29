@@ -2,50 +2,25 @@ package au.edu.jcu.assessment.utilityapp.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import au.edu.jcu.assessment.utilityapp.UtilityApplication
 import au.edu.jcu.assessment.utilityapp.data.repository.SettingsRepository
-import au.edu.jcu.assessment.utilityapp.domain.model.Picky
 import au.edu.jcu.assessment.utilityapp.domain.model.Settings
-import au.edu.jcu.assessment.utilityapp.domain.model.TestDepth
-import au.edu.jcu.assessment.utilityapp.domain.model.Usage
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 
-class SettingsViewModel(
-    private val repository: SettingsRepository
-) : ViewModel() {
+class SettingsViewModel(private val repository: SettingsRepository) : ViewModel() {
+    val settings: StateFlow<Settings> = repository.settings
 
-    val settings: StateFlow<Settings> = repository.settings.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = Settings()
-    )
+    fun update(change: (Settings) -> Settings) = repository.update(change)
 
-    fun selectUsage(usage: Usage) {
-        repository.update { it.copy(usage = usage) }
-    }
-
-    fun selectPicky(picky: Picky) {
-        repository.update { it.copy(picky = picky) }
-    }
-
-    fun selectDepth(depth: TestDepth) {
-        repository.update { it.copy(depth = depth) }
-    }
-
-    fun toggleDataSaver(enabled: Boolean) {
-        repository.update { it.copy(dataSaver = enabled) }
-    }
-
-    fun toggleUseMbps(useMbps: Boolean) {
-        repository.update { it.copy(useMbps = useMbps) }
-    }
-
-    class Factory(private val repository: SettingsRepository) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return SettingsViewModel(repository) as T
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val container = (this[APPLICATION_KEY] as UtilityApplication).container
+                SettingsViewModel(container.settingsRepository)
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import au.edu.jcu.assessment.utilityapp.di.AppContainer
 
 class UtilityApplication : Application() {
     lateinit var container: AppContainer
+        private set
 
     override fun onCreate() {
         super.onCreate()

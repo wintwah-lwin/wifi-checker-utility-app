@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import au.edu.jcu.assessment.utilityapp.ui.check.UtilityScreen
@@ -44,14 +43,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun UtilityApp() {
     var selectedTab by remember { mutableStateOf("Check") }
-    val app = LocalContext.current.applicationContext as UtilityApplication
-    val container = app.container
 
     val utilityViewModel: UtilityViewModel = viewModel(
-        factory = UtilityViewModel.Factory(container.connectionRepository, container.settingsRepository)
+        factory = UtilityViewModel.Factory
     )
     val settingsViewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModel.Factory(container.settingsRepository)
+        factory = SettingsViewModel.Factory
     )
 
     Scaffold(

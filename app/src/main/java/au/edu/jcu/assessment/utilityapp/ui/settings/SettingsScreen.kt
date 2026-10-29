@@ -1,140 +1,69 @@
 package au.edu.jcu.assessment.utilityapp.ui.settings
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import au.edu.jcu.assessment.utilityapp.R
-import au.edu.jcu.assessment.utilityapp.domain.model.Picky
-import au.edu.jcu.assessment.utilityapp.domain.model.TestDepth
+import au.edu.jcu.assessment.utilityapp.domain.model.*
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
-    val settings by viewModel.settings.collectAsState()
+fun SettingsScreen(viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    SettingsContent(settings, viewModel::update)
+}
 
+@Composable
+fun SettingsContent(settings: Settings, onChange: ((Settings) -> Settings) -> Unit, modifier: Modifier = Modifier) {
+    val onOff: @Composable (Boolean) -> String = { stringResource(if (it) R.string.on else R.string.off) }
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text(
-            text = stringResource(R.string.settings_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        // Picky Scale Selector
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.setting_picky),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = stringResource(R.string.setting_picky_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                Picky.entries.forEach { p ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = settings.picky == p,
-                            onClick = { viewModel.selectPicky(p) }
-                        )
-                        Text(
-                            text = stringResource(p.label),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
-            }
+        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
+        ChoiceGroup(R.string.setting_usage, null, Usage.entries, settings.usage, { stringResource(it.label) }) { picked ->
+            onChange { it.copy(usage = picked) }
         }
-
-        // Test Depth Selector
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.setting_depth),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = stringResource(R.string.setting_depth_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                TestDepth.entries.forEach { d ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = settings.depth == d,
-                            onClick = { viewModel.selectDepth(d) }
-                        )
-                        Text(
-                            text = stringResource(d.label),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
-            }
+        ChoiceGroup(R.string.setting_picky, R.string.setting_picky_hint, Picky.entries, settings.picky, { stringResource(it.label) }) { picked ->
+            onChange { it.copy(picky = picked) }
         }
+        ChoiceGroup(R.string.setting_depth, R.string.setting_depth_hint, TestDepth.entries, settings.depth,
+            { "${stringResource(it.label)} (~${it.approxMb} MB)" }) { picked -> onChange { it.copy(depth = picked) } }
+        ChoiceGroup(R.string.setting_data_saver, R.string.setting_data_saver_hint, listOf(true, false), settings.dataSaver, onOff) { picked ->
+            onChange { it.copy(dataSaver = picked) }
+        }
+        ChoiceGroup(R.string.setting_haptics, null, listOf(true, false), settings.haptics, onOff) { picked ->
+            onChange { it.copy(haptics = picked) }
+        }
+        ChoiceGroup(R.string.setting_units, null, listOf(true, false), settings.useMbps,
+            { stringResource(if (it) R.string.units_mbps else R.string.units_mbs) }) { picked -> onChange { it.copy(useMbps = picked) } }
+    }
+}
 
-        // Data Saver Switch
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.setting_data_saver),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = stringResource(R.string.setting_data_saver_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                Switch(
-                    checked = settings.dataSaver,
-                    onCheckedChange = { viewModel.toggleDataSaver(it) }
-                )
+/** One reusable settings row: a title, an optional hint and a wrapping row of choice chips. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun <T> ChoiceGroup(
+    @StringRes title: Int,
+    @StringRes hint: Int?,
+    options: List<T>,
+    selected: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
+        hint?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { option ->
+                FilterChip(selected = option == selected, onClick = { onSelect(option) }, label = { Text(label(option)) })
             }
         }
     }

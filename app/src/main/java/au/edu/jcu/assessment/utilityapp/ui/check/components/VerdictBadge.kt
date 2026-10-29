@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.sp
 import au.edu.jcu.assessment.utilityapp.R
 import au.edu.jcu.assessment.utilityapp.domain.model.Grade
 import au.edu.jcu.assessment.utilityapp.domain.model.Verdict
-import au.edu.jcu.assessment.utilityapp.ui.theme.VerdictColors
+import au.edu.jcu.assessment.utilityapp.ui.theme.color
 
 @Composable
 fun VerdictBadge(
@@ -22,10 +22,10 @@ fun VerdictBadge(
     usageName: String,
     modifier: Modifier = Modifier
 ) {
-    val (backgroundColor, textRes) = when (verdict.grade) {
-        Grade.GOOD -> VerdictColors.Good to R.string.verdict_good
-        Grade.STRUGGLES -> VerdictColors.Fair to R.string.verdict_struggles
-        Grade.POOR -> VerdictColors.Poor to R.string.verdict_poor
+    val textRes = when (verdict.grade) {
+        Grade.GOOD -> R.string.verdict_good
+        Grade.STRUGGLES -> R.string.verdict_struggles
+        Grade.POOR -> R.string.verdict_poor
     }
 
     Text(
@@ -34,7 +34,7 @@ fun VerdictBadge(
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         modifier = modifier
-            .background(backgroundColor, RoundedCornerShape(16.dp))
+            .background(verdict.grade.color(), RoundedCornerShape(16.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }

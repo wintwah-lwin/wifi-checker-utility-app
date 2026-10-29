@@ -116,4 +116,8 @@
     <string name="stat_upload">Upload</string>
     <string name="stat_stability">Stability</string>
     <string name="unit_ms">ms</string>
+
+    <string name="link_wifi">Wi-Fi</string>
+    <string name="link_cellular">Mobile data</string>
+    <string name="link_ethernet">Ethernet</string>
 </resources>
