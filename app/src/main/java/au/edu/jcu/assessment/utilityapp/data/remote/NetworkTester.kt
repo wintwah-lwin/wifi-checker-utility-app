@@ -1,12 +1,10 @@
 package au.edu.jcu.assessment.utilityapp.data.remote
 
+import au.edu.jcu.assessment.utilityapp.domain.model.TestDepth
+import au.edu.jcu.assessment.utilityapp.domain.model.TestEvent
+import kotlinx.coroutines.flow.Flow
+
+/** Runs a connection test. Implemented for real by Retrofit and by a fake for previews and tests. */
 interface NetworkTester {
-    suspend fun measurePing(serverUrl: String): Long
-    suspend fun measureDownloadSpeed(
-        serverUrl: String,
-        onProgress: (speedMbps: Double, progress: Float) -> Unit
-    ): Double
-    suspend fun measureUploadSpeed(
-        onProgress: (speedMbps: Double, progress: Float) -> Unit
-    ): Double
+    fun run(depth: TestDepth): Flow<TestEvent>
 }

@@ -23,23 +23,23 @@ class SettingsViewModel(
     )
 
     fun selectUsage(usage: Usage) {
-        repository.updateSettings(settings.value.copy(usage = usage))
+        repository.update { it.copy(usage = usage) }
     }
 
     fun selectPicky(picky: Picky) {
-        repository.updateSettings(settings.value.copy(picky = picky))
+        repository.update { it.copy(picky = picky) }
     }
 
     fun selectDepth(depth: TestDepth) {
-        repository.updateSettings(settings.value.copy(depth = depth))
+        repository.update { it.copy(depth = depth) }
     }
 
     fun toggleDataSaver(enabled: Boolean) {
-        repository.updateSettings(settings.value.copy(dataSaver = enabled))
+        repository.update { it.copy(dataSaver = enabled) }
     }
 
     fun toggleUseMbps(useMbps: Boolean) {
-        repository.updateSettings(settings.value.copy(useMbps = useMbps))
+        repository.update { it.copy(useMbps = useMbps) }
     }
 
     class Factory(private val repository: SettingsRepository) : ViewModelProvider.Factory {

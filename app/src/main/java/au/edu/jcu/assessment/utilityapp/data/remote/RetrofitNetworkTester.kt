@@ -1,58 +1,79 @@
 package au.edu.jcu.assessment.utilityapp.data.remote
 
-import kotlinx.coroutines.delay
-import retrofit2.Retrofit
-import kotlin.random.Random
+import au.edu.jcu.assessment.utilityapp.domain.model.Measurement
+import au.edu.jcu.assessment.utilityapp.domain.model.TestDepth
+import au.edu.jcu.assessment.utilityapp.domain.model.TestEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import kotlin.math.abs
 
-class RetrofitNetworkTester(
-    baseUrl: String = "https://speed.cloudflare.com/"
-) : NetworkTester {
+class RetrofitNetworkTester(private val api: SpeedApi) : NetworkTester {
 
-    private val speedApi: SpeedApi by lazy {
-        Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .build()
-            .create(SpeedApi::class.java)
+    override fun run(depth: TestDepth): Flow<TestEvent> = channelFlow {
+        val latencies = measureLatencies()
+        val down = if (depth.downloadBytes > 0) {
+            measureDownload(depth.downloadBytes) { send(TestEvent.Sample(it)) }
+        } else null
+        val up = if (depth.uploadBytes > 0) measureUpload(depth.uploadBytes) else null
+        send(TestEvent.Finished(Measurement(latencies.median(), latencies.jitter(), down, up)))
+    }.flowOn(Dispatchers.IO)   // blocking reads must not run on the main thread
+
+    /** Time-to-response of near-empty requests. The median ignores one-off spikes. */
+    private suspend fun measureLatencies(): List<Int> = List(LATENCY_PROBES) {
+        val start = System.nanoTime()
+        api.download(0).close()
+        ((System.nanoTime() - start) / 1_000_000).toInt()
     }
 
-    override suspend fun measurePing(serverUrl: String): Long {
-        val startTime = System.currentTimeMillis()
-        return try {
-            val response = speedApi.pingServer(serverUrl)
-            if (response.isSuccessful) {
-                (System.currentTimeMillis() - startTime).coerceAtLeast(10L)
-            } else {
-                25L
+    /** Streams the file, reporting a speed sample about every 200 ms, and returns the overall Mbps. */
+    private suspend fun measureDownload(bytes: Long, onSample: suspend (Double) -> Unit): Double =
+        api.download(bytes).use { body ->
+            val source = body.source()
+            val buffer = ByteArray(BUFFER_SIZE)
+            var total = 0L
+            var windowBytes = 0L
+            val start = System.nanoTime()
+            var windowStart = start
+            while (true) {
+                currentCoroutineContext().ensureActive()      // stop promptly if the user cancels
+                val read = source.read(buffer)
+                if (read == -1) break
+                total += read
+                windowBytes += read
+                val now = System.nanoTime()
+                if (now - windowStart >= SAMPLE_WINDOW_NANOS) {
+                    onSample(toMbps(windowBytes, now - windowStart))
+                    windowBytes = 0
+                    windowStart = now
+                }
             }
-        } catch (_: Exception) {
-            35L
+            toMbps(total, System.nanoTime() - start)
         }
+
+    private suspend fun measureUpload(bytes: Int): Double {
+        val body = ByteArray(bytes).toRequestBody("application/octet-stream".toMediaType())
+        val start = System.nanoTime()
+        api.upload(body).close()
+        return toMbps(bytes.toLong(), System.nanoTime() - start)
     }
 
-    override suspend fun measureDownloadSpeed(
-        serverUrl: String,
-        onProgress: (speedMbps: Double, progress: Float) -> Unit
-    ): Double {
-        val simulatedFinalSpeed = Random.nextDouble(25.0, 95.0)
-        val steps = 10
-        for (i in 1..steps) {
-            delay(150)
-            val currentSpeed = (simulatedFinalSpeed * i / steps) + Random.nextDouble(-2.0, 2.0)
-            onProgress(currentSpeed.coerceAtLeast(1.0), i / steps.toFloat())
-        }
-        return simulatedFinalSpeed
-    }
+    /** bits per microsecond equals megabits per second. */
+    private fun toMbps(bytes: Long, nanos: Long): Double = bytes * 8.0 / (nanos / 1_000.0)
 
-    override suspend fun measureUploadSpeed(
-        onProgress: (speedMbps: Double, progress: Float) -> Unit
-    ): Double {
-        val simulatedUploadSpeed = Random.nextDouble(10.0, 45.0)
-        val steps = 8
-        for (i in 1..steps) {
-            delay(150)
-            val currentSpeed = (simulatedUploadSpeed * i / steps) + Random.nextDouble(-1.5, 1.5)
-            onProgress(currentSpeed.coerceAtLeast(0.5), i / steps.toFloat())
-        }
-        return simulatedUploadSpeed
+    private fun List<Int>.median(): Int = sorted()[size / 2]
+
+    /** Average change between consecutive probes: a simple measure of how steady the connection is. */
+    private fun List<Int>.jitter(): Int = zipWithNext { a, b -> abs(a - b) }.average().toInt()
+
+    private companion object {
+        const val LATENCY_PROBES = 5
+        const val BUFFER_SIZE = 64 * 1024
+        const val SAMPLE_WINDOW_NANOS = 200_000_000L
     }
 }

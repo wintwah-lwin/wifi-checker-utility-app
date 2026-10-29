@@ -46,17 +46,24 @@ class UtilityViewModel(
                 }
             }
         }
-        refreshLinkInfo()
+        viewModelScope.launch {
+            connectionRepository.link.collect { linkInfo ->
+                _uiState.update { current ->
+                    val newAnalysis = current.measurement?.let { m ->
+                        ConnectionAnalyzer.analyze(m, linkInfo, current.settings)
+                    }
+                    current.copy(linkInfo = linkInfo, analysis = newAnalysis ?: current.analysis)
+                }
+            }
+        }
     }
 
     fun refreshLinkInfo() {
-        val info = connectionRepository.getLinkInfo()
-        _uiState.update { it.copy(linkInfo = info) }
+        connectionRepository.refreshLink()
     }
 
     fun selectUsage(usage: Usage) {
-        val updated = _uiState.value.settings.copy(usage = usage)
-        settingsRepository.updateSettings(updated)
+        settingsRepository.update { it.copy(usage = usage) }
     }
 
     fun startTest() {
@@ -66,7 +73,7 @@ class UtilityViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isTesting = true, currentSampleMbps = 0.0) }
 
-            connectionRepository.runSpeedTest(settings.depth).collect { event ->
+            connectionRepository.runTest(settings.depth).collect { event ->
                 when (event) {
                     is TestEvent.Sample -> {
                         _uiState.update { it.copy(currentSampleMbps = event.mbps) }
