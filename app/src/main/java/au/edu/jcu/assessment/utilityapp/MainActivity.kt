@@ -17,39 +17,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import au.edu.jcu.assessment.utilityapp.ui.check.UtilityScreen
-import au.edu.jcu.assessment.utilityapp.ui.check.UtilityViewModel
 import au.edu.jcu.assessment.utilityapp.ui.settings.SettingsScreen
-import au.edu.jcu.assessment.utilityapp.ui.settings.SettingsViewModel
 import au.edu.jcu.assessment.utilityapp.ui.theme.MobileTech_UtilityAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            MobileTech_UtilityAppTheme {
-                UtilityApp()
-            }
-        }
+        setContent { MobileTech_UtilityAppTheme { UtilityApp() } }
     }
 }
 
 @Composable
 fun UtilityApp() {
-    var selectedTab by remember { mutableStateOf("Check") }
-
-    val utilityViewModel: UtilityViewModel = viewModel(
-        factory = UtilityViewModel.Factory
-    )
-    val settingsViewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModel.Factory
-    )
+    var selectedTab by rememberSaveable { mutableStateOf("Utility") }   // survives rotation
 
     Scaffold(
         bottomBar = {
@@ -57,8 +43,8 @@ fun UtilityApp() {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.tab_check)) },
                     label = { Text(stringResource(R.string.tab_check)) },
-                    selected = selectedTab == "Check",
-                    onClick = { selectedTab = "Check" }
+                    selected = selectedTab == "Utility",
+                    onClick = { selectedTab = "Utility" }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.tab_settings)) },
@@ -69,10 +55,10 @@ fun UtilityApp() {
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                "Check" -> UtilityScreen(viewModel = utilityViewModel)
-                "Settings" -> SettingsScreen(viewModel = settingsViewModel)
+                "Utility" -> UtilityScreen()
+                "Settings" -> SettingsScreen()
             }
         }
     }
